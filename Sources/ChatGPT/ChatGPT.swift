@@ -47,12 +47,13 @@ public class ChatGPT {
     public init(
         apiKey: String,
         defaultModel: ChatGPTModel = .gpt3,
-        urlSessionConfiguration: URLSessionConfiguration? = nil
+        urlSessionConfiguration: URLSessionConfiguration? = nil,
+        apiBaseUrl: String = API.base,
     ) {
         self.apiKey = apiKey
         self.apiClientRequestHandler = .init(apiKey: apiKey)
         self.defaultModel = defaultModel
-        self.client = APIClient(baseURL: URL(string: API.base)) { [apiClientRequestHandler] configuration in
+        self.client = APIClient(baseURL: URL(string: apiBaseUrl)) { [apiClientRequestHandler] configuration in
             configuration.delegate = apiClientRequestHandler
             if let urlSessionConfiguration {
                 configuration.sessionConfiguration = urlSessionConfiguration
