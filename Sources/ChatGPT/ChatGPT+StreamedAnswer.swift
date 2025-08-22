@@ -20,10 +20,10 @@
 //  SOFTWARE.
 //
 
-import Foundation
-import Get
 import Base
+import Foundation
 import GPTSwiftSharedTypes
+import Get
 
 extension ChatGPT {
     public class StreamedAnswer {
@@ -85,7 +85,9 @@ extension ChatGPT {
         /// - Returns: The response.
         /// - Throws: A `GPTSwiftError`.
         @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
-        public func ask(request chatRequest: ChatRequest) async throws -> AsyncThrowingStream<String, Swift.Error> {
+        public func ask(request chatRequest: ChatRequest) async throws -> AsyncThrowingStream<
+            String, Swift.Error
+        > {
 
             var chatRequest = chatRequest
             chatRequest.stream = true
@@ -102,7 +104,8 @@ extension ChatGPT {
                 }
 
                 guard response.statusCode.isStatusCodeOkay else {
-                    throw GPTSwiftError.requestFailed(message: "Response status code was unacceptable: \(response.statusCode)")
+                    throw GPTSwiftError.requestFailed(
+                        message: "Response status code was unacceptable: \(response.statusCode)")
                 }
 
                 return AsyncThrowingStream { continuation in
@@ -110,7 +113,7 @@ extension ChatGPT {
                         do {
                             for try await line in result.lines {
                                 guard let chatResponse = line.asStreamedResponse else {
-                                    break
+                                    continue
                                 }
 
                                 // Ignore lines where only the role is specified
@@ -160,18 +163,19 @@ extension ChatGPT {
 }
 
 private let decoder = JSONDecoder()
-private extension String {
-    var asStreamedResponse: ChatStreamedResponse? {
+extension String {
+    fileprivate var asStreamedResponse: ChatStreamedResponse? {
         guard hasPrefix("data: "),
-              let data = dropFirst(6).data(using: .utf8) else {
+            let data = dropFirst(6).data(using: .utf8)
+        else {
             return nil
         }
         return try? decoder.decode(ChatStreamedResponse.self, from: data)
     }
 }
 
-private extension Int {
-    var isStatusCodeOkay: Bool {
+extension Int {
+    fileprivate var isStatusCodeOkay: Bool {
         (200...299).contains(self)
     }
 }
