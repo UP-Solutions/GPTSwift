@@ -110,41 +110,45 @@ extension ChatGPT {
 
                 return AsyncThrowingStream { continuation in
                     Task {
+                        var linesProcessed = 0
                         do {
                             for try await line in result.lines {
+                                linesProcessed += 1
+                                print("GPTSwift DEBUG: Received line \(linesProcessed): \(line)")  // <-- LOGGING
 
-                                if line === "data: [DONE]" { break }
-
-                                print(line)
+                                if line == "data: [DONE]" {
+                                    print("GPTSwift DEBUG: End of stream detected.")  // <-- LOGGING
+                                    break
+                                }
 
                                 guard line.hasPrefix("data: "),
                                     let data = line.dropFirst(6).data(using: .utf8)
-                                else { continue }
-
-                                guard
-                                    let chatResponse = try? decoder.decode(
-                                        ChatStreamedResponse.self, from: data)
                                 else {
                                     continue
                                 }
 
-                                // Ignore lines where only the role is specified
-                                if chatResponse.choices.first?.delta.role != nil {
-                                    continue
+                                do {
+                                    let chatResponse = try decoder.decode(
+                                        ChatStreamedResponse.self, from: data)
+                                    if let message = chatResponse.choices.first?.delta.content {
+                                        continuation.yield(message)
+                                    }
+                                } catch {
+                                    // This is the most important log! It will tell us if the JSON is wrong.
+                                    print(
+                                        "GPTSwift DEBUG: JSON DECODING FAILED. Error: \(error). Data: \(String(data: data, encoding: .utf8) ?? "corrupt")"
+                                    )  // <-- LOGGING
                                 }
-
-                                guard let message = chatResponse.choices.first?.delta.content else {
-                                    continue
-                                }
-
-                                // Yield next token
-                                continuation.yield(message)
                             }
                         } catch {
-                            continuation.finish(throwing: GPTSwiftError.responseParsingfailed)
+                            print("GPTSwift DEBUG: Error while reading stream lines: \(error)")  // <-- LOGGING
+                            continuation.finish(throwing: GPTSwiftError.responseParsingFailed)
                             return
                         }
 
+                        print(
+                            "GPTSwift DEBUG: Stream processing finished. Processed \(linesProcessed) lines."
+                        )  // <-- LOGGING
                         continuation.finish()
                     }
                 }
