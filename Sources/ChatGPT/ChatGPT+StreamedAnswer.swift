@@ -112,7 +112,19 @@ extension ChatGPT {
                     Task {
                         do {
                             for try await line in result.lines {
-                                guard let chatResponse = line.asStreamedResponse else {
+
+                                if line === "data: [DONE]" { break }
+
+                                print(line)
+
+                                guard line.hasPrefix("data: "),
+                                    let data = line.dropFirst(6).data(using: .utf8)
+                                else { continue }
+
+                                guard
+                                    let chatResponse = try? decoder.decode(
+                                        ChatStreamedResponse.self, from: data)
+                                else {
                                     continue
                                 }
 
@@ -129,7 +141,8 @@ extension ChatGPT {
                                 continuation.yield(message)
                             }
                         } catch {
-                            throw GPTSwiftError.responseParsingFailed
+                            continuation.finish(throwing: GPTSwiftError.responseParsingfailed)
+                            return
                         }
 
                         continuation.finish()
